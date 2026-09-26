@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>IVVI Tokyo Reco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0A0A;
+    --ink-soft:#8A8A85;
+    --line:#EBEBE6;
+    --card:#FFFFFF;
+    --accent:#FC7200;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#fff;color:var(--ink);font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  button{font-family:'Instrument Sans',sans-serif;}
+
+  #map-wrapper{position:fixed;inset:0;z-index:0;background:#F4F4F1;}
+  #map{width:100%;height:100%;}
+
+  .topbar{
+    position:fixed;top:0;left:0;right:0;z-index:600;
+    padding:calc(env(safe-area-inset-top,0px) + 18px) 20px 0 150px;
+    pointer-events:none;
+    display:flex;align-items:flex-start;justify-content:flex-start;gap:12px;
+  }
+  .topbar > *{pointer-events:auto;}
+  .brand{
+    position:fixed;top:0;left:0;z-index:601;
+    background:#fff;border-radius:0;
+    padding:10px 14px;
+    padding-top:calc(env(safe-area-inset-top,0px) + 10px);
+    padding-left:calc(env(safe-area-inset-left,0px) + 14px);
+    box-shadow:0 2px 14px rgba(0,0,0,0.08);
+    display:flex;align-items:center;
+    cursor:pointer;transition:transform .12s ease;
+  }
+  .brand:hover{background:#F7F7F5;}
+  .brand:active{transform:scale(.96);}
+  .brand svg{height:26.4px;width:auto;display:block;}
+  @media (min-width: 880px){ .brand svg{height:31.68px;} }
+  .place-count-desktop{
+    display:none;font-size:11.5px;color:var(--ink-soft);font-weight:600;
+    background:#fff;padding:8px 12px;border-radius:0;box-shadow:0 2px 14px rgba(0,0,0,0.08);
+    align-self:center;white-space:nowrap;
+  }
+  @media (min-width: 880px){ .place-count-desktop{display:flex;align-items:center;} }
+  .place-count-mobile{
+    font-size:11px;color:var(--ink-soft);font-weight:600;text-align:center;margin-bottom:8px;
+  }
+  @media (min-width: 880px){ .place-count-mobile{display:none;} }
+  .search-wrap{flex:1 1 auto;max-width:380px;}
+  .search-row{
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);border-radius:12px;padding:11px 14px;
+    box-shadow:0 2px 14px rgba(0,0,0,0.08);
+    transition:box-shadow .2s ease, transform .2s ease;
+  }
+  .search-row:focus-within{box-shadow:0 6px 22px rgba(0,0,0,0.16);transform:scale(1.02);}
+  .search-row svg{flex:0 0 auto;opacity:0.4;}
+  .search-row input{
+    border:none;outline:none;flex:1;font-family:'Instrument Sans',sans-serif;
+    font-size:15px;color:var(--ink);background:transparent;font-weight:500;
+  }
+
+  .locate-btn{
+    position:fixed;top:calc(env(safe-area-inset-top,0px) + 100px);right:20px;z-index:600;
+    width:40px;height:40px;border-radius:50%;background:#fff;border:none;
+    box-shadow:0 2px 14px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:background .15s ease, transform .15s ease;
+  }
+  .locate-btn:hover{background:#F4F4F1;transform:scale(1.06);}
+  @media (min-width: 880px){ .locate-btn{right:432px;} }
+
+  .nb-close-anchor{position:absolute;z-index:16;}
+  .nb-close-btn{
+    width:34px;height:34px;border-radius:50%;background:#fff;border:none;
+    box-shadow:0 2px 14px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:var(--ink);cursor:pointer;transition:background .15s ease, transform .15s ease;
+    pointer-events:auto;
+  }
+  .nb-close-btn:hover{background:#F4F4F1;transform:scale(1.08);}
+
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:700;
+    background:var(--card);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -10px 34px rgba(0,0,0,0.12);
+    height:88vh;
+    overflow-x:hidden;
+    transform:translateY(calc(88vh - 140px));
+    transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    touch-action:none;
+    display:flex;flex-direction:column;
+  }
+  .sheet.dragging{transition:none;}
+  .sheet.state-half{transform:translateY(46vh);}
+  .sheet.state-full{transform:translateY(0);}
+
+  .handle-zone{flex:0 0 auto;padding:12px 20px 8px;cursor:grab;}
+  .handle-bar{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px;}
+  .sheet-count{font-size:10.5px;color:var(--ink-soft);font-weight:600;}
+
+  .filter-row{flex:0 0 auto;padding:2px 0 12px;background:#fff;border-bottom:1px solid var(--line);overflow-x:hidden;}
+  .filter-row.hidden{display:none;}
+  .chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;padding-left:20px;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto;font-size:12px;font-weight:600;letter-spacing:0.01em;
+    padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+    cursor:pointer;white-space:nowrap;transition:all .15s ease;
+  }
+  .chip:hover{border-color:var(--ink);color:var(--ink);}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .sheet-body{flex:1 1 auto;overflow-y:hidden;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:8px 20px 50px;max-width:100%;}
+  .sheet.state-full .sheet-body{overflow-y:auto;}
+
+  @keyframes listIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .list-anim{animation:listIn .25s ease;}
+
+  .section-label{
+    font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--ink-soft);margin:22px 0 12px;
+  }
+  .section-label:first-child{margin-top:6px;}
+
+  .card{display:flex;gap:14px;padding:16px 20px;margin:0 -20px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s ease;max-width:calc(100% + 40px);box-sizing:border-box;}
+  .card:hover{background:#EFEEE8;}
+  .card:last-child{border-bottom:none;}
+  .thumb{
+    flex:0 0 auto;width:68px;height:68px;border-radius:12px;
+    background:#F4F4F1 center/cover no-repeat;color:var(--ink);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:22px;overflow:hidden;
+  }
+  .card-body{flex:1 1 auto;min-width:0;}
+  .card-name{font-weight:700;font-size:40px;letter-spacing:-0.02em;line-height:1.02;margin:0 0 6px;overflow-wrap:break-word;word-break:break-word;}
+  .card-meta{font-size:12px;color:var(--ink-soft);margin:0 0 6px;font-weight:600;}
+  .card-note{font-size:13.5px;line-height:1.5;color:#3A3A36;margin:0 0 8px;}
+  .card-link{
+    display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+    border-radius:50%;background:#F4F4F1;color:var(--ink);transition:background .15s ease;
+  }
+  .card-link:hover{background:var(--ink);color:#fff;}
+
+  .nb-bar{
+    position:fixed;left:0;right:0;bottom:140px;z-index:650;
+    padding:10px 0 12px;pointer-events:none;
+  }
+  .nb-bar-inner{
+    display:flex;gap:10px;overflow-x:auto;overflow-y:visible;pointer-events:auto;
+    scrollbar-width:none;padding:6px 0 2px 20px;
+  }
+  .nb-bar-inner::-webkit-scrollbar{display:none;}
+  .nb-card{
+    position:relative;flex:0 0 auto;width:375px;height:190px;border-radius:16px;overflow:hidden;
+    background:#F4F4F1 center/cover no-repeat;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.14);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .nb-card:hover{transform:translateY(-3px) scale(1.015);box-shadow:0 10px 26px rgba(0,0,0,.24);}
+  .nb-card-count{
+    position:absolute;top:9px;left:9px;background:rgba(255,255,255,.25);backdrop-filter:blur(4px);
+    color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;z-index:2;
+  }
+  .nb-card-name{
+    position:absolute;left:14px;right:14px;bottom:26px;color:#fff;font-weight:400;font-size:48px;
+    letter-spacing:-0.02em;line-height:1.05;z-index:2;overflow-wrap:break-word;word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .nb-card-jp{
+    position:absolute;left:14px;right:14px;bottom:10px;color:rgba(255,255,255,.8);
+    font-size:18px;font-weight:500;z-index:2;
+  }
+
+  @media (min-width: 880px){
+    .nb-bar{ right:412px; bottom:0; padding:10px 0 20px; }
+    .nb-card{ width:430px; height:218px; }
+  }
+
+  .back-row{
+    display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink);
+    cursor:pointer;margin:8px 0 18px;transition:opacity .15s ease;
+  }
+  .back-row:hover{opacity:.6;}
+  .nb-hero-sticky{
+    position:sticky;top:0;z-index:20;margin:0 -20px 0;
+  }
+  #list > .chips{
+    position:sticky;z-index:15;background:#fff;padding-top:10px;padding-bottom:10px;
+    border-bottom:1px solid var(--line);margin:0 -20px 4px;
+  }
+  .nb-hero{
+    position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;
+    background:#F4F4F1 center/cover no-repeat;
+  }
+  .nb-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,.88), rgba(0,0,0,0) 55%);}
+  .nb-hero-close{
+    position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+    background:rgba(0,0,0,.4);backdrop-filter:blur(4px);border:none;color:#fff;
+    font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    z-index:3;transition:background .15s ease;box-shadow:0 2px 8px rgba(0,0,0,.2);
+  }
+  .nb-hero-close:hover{background:rgba(0,0,0,.6);}
+  .nb-hero-content{position:absolute;left:0;right:0;bottom:0;padding:20px;color:#fff;z-index:2;}
+  .nb-hero-name{font-size:28px;font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;}
+  .nb-hero-jp{font-size:14px;color:rgba(255,255,255,.85);margin-bottom:10px;}
+  .nb-hero-note{font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.92);}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);font-size:14px;font-weight:600;}
+
+  .locate-dot{position:absolute;transform:translate(-50%,-50%);pointer-events:none;}
+  .locate-dot .pulse{
+    position:absolute;left:-18px;top:-18px;width:36px;height:36px;border-radius:50%;
+    background:rgba(26,115,232,.35);animation:pulseGlow 1.6s ease-out infinite;
+  }
+  .locate-dot .dot{
+    position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;
+    background:#1a73e8;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3);
+  }
+  @keyframes pulseGlow{0%{transform:scale(.4);opacity:.8;}100%{transform:scale(1.8);opacity:0;}}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    position:relative;background:#fff;border-radius:22px;max-width:480px;width:100%;
+    max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  }
+  .modal-close{
+    position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;
+    background:#F4F4F1;border:none;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:3;transition:background .15s ease;
+  }
+  .modal-close:hover{background:var(--line);}
+  .modal-carousel-wrap{position:relative;margin-bottom:14px;}
+  .modal-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:14px;background:#F4F4F1;margin-bottom:0;}
+  .modal-carousel::-webkit-scrollbar{display:none;}
+  .modal-single-photo{width:100%;height:220px;object-fit:cover;border-radius:14px;display:block;}
+  .modal-cat{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
+  .modal-name{font-size:26px;font-weight:700;letter-spacing:-0.01em;margin-bottom:6px;}
+  .modal-rating{font-size:13px;font-weight:600;margin-bottom:8px;}
+  .modal-hours{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;font-weight:600;}
+  .modal-note{font-size:14px;line-height:1.6;color:#2A2A26;margin-bottom:18px;}
+  .modal-cta{
+    display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;
+    border-radius:50%;background:var(--ink);color:#fff;transition:background .15s ease;
+  }
+  .modal-cta:hover{background:var(--accent);}
+
+  .dot-pin{width:15px;height:15px;border-radius:50%;background:#000;border:2px solid #fff;}
+
+  @media (min-width: 880px){
+    .topbar{right:412px;}
+    .sheet{
+      left:auto;right:0;top:0;bottom:0;width:392px;height:100vh;
+      border-radius:0;box-shadow:-6px 0 30px rgba(0,0,0,0.08);
+      transform:none !important;border-left:1px solid var(--line);
+    }
+    .sheet .sheet-body{overflow-y:auto;}
+    .handle-zone{cursor:default;padding:calc(env(safe-area-inset-top,0px) + 20px) 24px 8px;}
+    .handle-bar{display:none;}
+    .filter-row{padding:2px 0 12px;}
+    .chips{padding-left:24px;}
+    .sheet-body{padding:8px 24px 60px;}
+    .card{margin:0 -24px;padding:16px 24px;max-width:calc(100% + 48px);}
+    .nb-hero-sticky{margin:0 -24px 0;}
+    #list > .chips{margin:0 -24px 4px;}
+  }
+
+  @media (max-width: 879px){
+    .nb-bar{display:none;}
+    .nb-hero-sticky{position:static;}
+    #list > .chips{top:0 !important;}
+
+    .search-wrap{
+      position:fixed;left:16px;right:16px;bottom:calc(140px + 12px);
+      max-width:none;z-index:650;
+    }
+    .search-row:focus-within{transform:scale(1.06);}
+
+    .locate-btn{
+      top:calc(env(safe-area-inset-top,0px) + 4px);
+      right:16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="map-wrapper"><div id="map"></div></div>
+
+<div class="topbar">
+  <div class="brand" id="brandLogo" title="Reset to default view">
+    <svg width="783" height="210.97" viewBox="0 0 783 210.97" xmlns="http://www.w3.org/2000/svg">
+      <path d="M759,71v85h-222v-85h222M763,67h-230v93h230v-93h0Z"/>
+      <path d="M614.4,85.69l-3.43.34c-.84.11-1.25.54-1.25,1.25,0,.34.08.68.26,1.01l15.24,34.33,14.15-34.67c.16-.45.26-.78.26-1.01,0-.5-.39-.81-1.17-.93l-3.61-.34v-1.67h12.72v1.67l-3.1.34c-.68.06-1.14.23-1.43.5-.28.28-.58.78-.93,1.51l-22.94,55.52h-2.68l-24.3-55.52c-.34-.73-.65-1.23-.93-1.51-.28-.28-.76-.45-1.43-.5l-3.1-.34v-1.67h27.64v1.67l.03.02h0Z"/>
+      <path d="M677.79,85.69l-3.43.34c-.84.11-1.25.54-1.25,1.25,0,.34.08.68.26,1.01l15.24,34.33,14.15-34.67c.16-.45.26-.78.26-1.01,0-.5-.39-.81-1.17-.93l-3.61-.34v-1.67h12.72v1.67l-3.1.34c-.68.06-1.15.23-1.43.5s-.59.78-.93,1.51l-22.94,55.52h-2.68l-24.31-55.52c-.34-.73-.65-1.23-.93-1.51s-.76-.45-1.43-.5l-3.1-.34v-1.67h27.64v1.67l.03.02h0Z"/>
+      <path d="M573.55,139.71c.26.23.8.42,1.64.58l3.1.68v1.67h-27.29v-1.67l3.1-.68c.84-.16,1.38-.37,1.64-.58.26-.23.37-.65.37-1.25v-50.24c0-.62-.13-1.04-.37-1.25-.26-.23-.8-.42-1.64-.58l-3.1-.68v-1.67h27.29v1.67l-3.1.68c-.85.16-1.38.36-1.64.58-.26.23-.37.65-.37,1.25v50.24c0,.62.11,1.02.37,1.25Z"/>
+      <path d="M741.21,139.71c.26.23.8.42,1.64.58l3.1.68v1.67h-27.29v-1.67l3.1-.68c.85-.16,1.38-.37,1.64-.58.26-.23.37-.65.37-1.25v-50.24c0-.62-.11-1.04-.37-1.25-.26-.23-.8-.42-1.64-.58l-3.1-.68v-1.67h27.29v1.67l-3.1.68c-.84.16-1.38.36-1.64.58-.26.23-.37.65-.37,1.25v50.24c0,.62.13,1.02.37,1.25Z"/>
+      <path d="M468.85,161.37c-9.73,0-18.45-2.08-26.13-6.23-7.63-4.22-13.64-9.95-18.04-17.21-4.34-7.32-6.51-15.63-6.51-24.93s2.17-17.58,6.51-24.83c4.4-7.32,10.42-13.05,18.04-17.21,7.69-4.22,16.4-6.32,26.13-6.32s18.48,2.11,26.04,6.32c7.63,4.15,13.61,9.89,17.95,17.21,4.34,7.25,6.51,15.53,6.51,24.83s-2.17,17.61-6.51,24.93c-4.34,7.25-10.32,12.99-17.95,17.21-7.56,4.15-16.24,6.23-26.04,6.23h0ZM468.75,130.68c2.98,0,5.61-.74,7.91-2.23,2.36-1.55,4.18-3.66,5.49-6.32,1.36-2.73,2.05-5.83,2.05-9.3s-.68-6.32-2.05-8.93c-1.3-2.67-3.13-4.74-5.49-6.23-2.29-1.55-4.93-2.33-7.91-2.33s-5.64.78-8,2.33c-2.29,1.49-4.12,3.57-5.49,6.23-1.3,2.61-1.95,5.58-1.95,8.93s.65,6.57,1.95,9.3c1.36,2.67,3.19,4.77,5.49,6.32,2.36,1.49,5.02,2.23,8,2.23Z"/>
+      <path d="M387.53,159.5h-36.4l-48.64-93.01h39.06l25.76,54.32,22.51-54.32h36.27l-38.56,93.01Z"/>
+      <path d="M256.3,159.51h-34.32V20h34.32v87.47l30.99-40.97h39.97l-70.96,93.01h0Z"/>
+      <path d="M164.33,161.37c-9.74,0-18.45-2.08-26.13-6.23-7.63-4.22-13.64-9.95-18.04-17.21-4.34-7.32-6.51-15.63-6.51-24.93s2.17-17.58,6.51-24.83c4.4-7.32,10.42-13.05,18.04-17.21,7.69-4.22,16.4-6.32,26.13-6.32s18.48,2.11,26.04,6.32c7.63,4.15,13.61,9.89,17.95,17.21,4.34,7.25,6.51,15.53,6.51,24.83s-2.17,17.61-6.51,24.93c-4.34,7.25-10.32,12.99-17.95,17.21-7.56,4.15-16.24,6.23-26.04,6.23h0ZM164.24,130.68c2.98,0,5.61-.74,7.9-2.23,2.36-1.55,4.19-3.66,5.49-6.32,1.36-2.73,2.05-5.83,2.05-9.3s-.68-6.32-2.05-8.93c-1.3-2.67-3.13-4.74-5.49-6.23-2.29-1.55-4.93-2.33-7.9-2.33s-5.64.78-8,2.33c-2.29,1.49-4.12,3.57-5.49,6.23-1.3,2.61-1.95,5.58-1.95,8.93s.65,6.57,1.95,9.3c1.36,2.67,3.19,4.77,5.49,6.32,2.36,1.49,5.02,2.23,8,2.23Z"/>
+      <path d="M106.35,159.51h-36.83V52.09H30.83V20h114.21v32.09h-38.69s0,107.42,0,107.42Z"/>
+      <rect x="316.81" y="159.5" width="34.32" height="34.32"/>
+      <rect x="282.49" y="125.19" width="34.32" height="34.32"/>
+    </svg>
+  </div>
+  <div class="place-count-desktop" id="sheetCountDesktop">Loading…</div>
+  <div class="search-wrap">
+    <div class="search-row">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="Search…" />
+    </div>
+  </div>
+</div>
+
+
+<button class="locate-btn" id="locateBtn" title="Show my location">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+</button>
+
+<div class="sheet" id="sheet">
+  <div class="handle-zone" id="handleZone">
+    <div class="place-count-mobile" id="sheetCountMobile">Loading…</div>
+    <div class="handle-bar"></div>
+  </div>
+  <div class="filter-row" id="filterRow">
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="sheet-body" id="list"></div>
+</div>
+
+<div class="nb-bar">
+  <div class="nb-bar-inner" id="nbBarInner"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+const PIN_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+
+const CATEGORIES = {
+  nb: { label: "Neighborhood", emoji: "🏘️" },
+  sh: { label: "Shop", emoji: "🛍️" },
+  ar: { label: "Gallery & Museum", emoji: "🖼️" },
+  bk: { label: "Book", emoji: "📚" },
+  fd: { label: "Food", emoji: "🍜" },
+  cf: { label: "Cafe", emoji: "☕" },
+  ty: { label: "Toy", emoji: "🧸" },
+  iz: { label: "Izakaya", emoji: "🏮" },
+  br: { label: "Bar", emoji: "🍸" },
+  sg: { label: "Sight", emoji: "🗼" }
+};
+
+
+
+// "note" is Vincent's own line, kept separate from anything pulled live from Google.
+const PLACES = [
+  { n:"Shimokitazawa", jp:"下北沢", c:"nb", note:"One of Tokyo's best areas for vintage and thrift shopping, small cafés, and independent stores. It's probably the most touristy of the neighborhoods here, but it still feels genuinely local — the easiest place to walk with no fixed itinerary.", p:"ChIJw_teZ_8hGGARgsSeLR2OLjM", lat:35.665786, lng:139.6698627 },
+  { n:"Koenji", jp:"高円寺", c:"nb", note:"A little rougher and less polished than Shimokitazawa, which is part of the appeal. Secondhand clothing, dive bars, small live music venues, and a stronger alternative streak.", p:"ChIJb_sgAX7yGGARxVrgA881DRE", lat:35.7078984, lng:139.6464845 },
+  { n:"Kichijoji", jp:"吉祥寺", c:"nb", note:"A relaxed neighborhood with independent shops, cafés, and restaurants. Home to Inokashira Park and an easy walk from the Ghibli Museum — pair the two on the same day.", p:"ChIJBUM940XuGGAR4dVP7nqzDHc", lat:35.704096, lng:139.5802054 },
+  { n:"Nakameguro", jp:"中目黒", c:"nb", note:"A slow afternoon walk along the Meguro River, small cafés and lifestyle stores by day, casual izakaya by night. The Starbucks Reserve Roastery is here too, worth a look even if you don't care about Starbucks.", p:"ChIJAas2LziLGGAROimsxcM_Rqo", lat:35.6387161, lng:139.7026251 },
+  { n:"Daikanyama", jp:"代官山", c:"nb", note:"A more polished, design-conscious neighborhood just up the hill from Nakameguro. Independent fashion, lifestyle, and architecture-focused stores, easy to pair with Nakameguro and Ebisu in one day.", p:"ChIJ68vK5kSLGGARoiBaKr3YZgU", lat:35.6505465, lng:139.7042207 },
+  { n:"Marunouchi", jp:"丸の内", c:"nb", note:"The area around Tokyo Station and the Imperial Palace. Polished and high-end, but the shopping isn't limited to luxury brands — the Palace grounds and surrounding parks give a completely different pace from central Tokyo.", p:"ChIJdUl5zfuLGGARyfYneysknCM", lat:35.6804062, lng:139.7664859 },
+  { n:"Shimbashi", jp:"新橋", c:"nb", note:"The place to see Tokyo's salaryman culture. Go around 6–8pm, ideally a Friday, when the streets fill with office workers heading for drinks and the tiny izakaya packed into the backstreets come alive.", p:"ChIJGx6XGeqLGGARGn6w2QDkxVA", lat:35.6648291, lng:139.7562635 },
+  { n:"Jimbocho", jp:"神保町", c:"nb", note:"Tokyo's book town. Decades-old secondhand and specialist bookstores line the streets, mostly Japanese but with pockets of English, art, and design books. Easily a half or full day if you're serious about it.", p:"ChIJwwXpBxSMGGARUdN86mbnCJ8", lat:35.696966, lng:139.7562635 },
+  { n:"Gakugeidaigaku", jp:"学芸大学", c:"nb", note:"A quieter, residential stretch south of Shibuya with an unusually good concentration of coffee roasters, bakeries, and small izakaya. Less about sights, more about finding a favorite corner café.", p:"ChIJtyvFj870GGAR90SNuxTiMCs", lat:35.6288624, lng:139.6853301 },
+  { n:"Kuramae", jp:"蔵前", c:"nb", note:"Once a wholesale district for paper and stationery, now Tokyo's low-key answer to Brooklyn — small-batch leather workshops, roasteries, and independent stores along the Sumida River, a short walk from Asakusa.", p:"ChIJa1Z7RbaOGGARoDHuSQFTaa4", lat:35.7021284, lng:139.7920494 },
+  { n:"Kagurazaka", jp:"神楽坂", c:"nb", note:"A hillside neighborhood with a distinct French-meets-old-Tokyo feel — narrow cobbled alleys, traditional ryotei, and a surprising number of good bistros and patisseries.", p:"ChIJIaZLQ1qMGGARYTD1p6NjCuI", lat:35.7014598, lng:139.7402946 },
+  { n:"Harajuku", jp:"原宿", c:"nb", note:"Loud, youth-driven side streets and flagship retail architecture. Busy, but the side streets off Takeshita and Cat Street offer an escape from the crowds.", p:"ChIJ5V1T5KKMGGARlTLiBrjIGUg", lat:35.6699682, lng:139.709008 },
+  { n:"Omotesando", jp:"表参道", c:"nb", note:"A tree-lined avenue of flagship architecture, running parallel to Harajuku's busier streets. More polished pace, still easy to combine with a Harajuku walk.", p:"ChIJSTdtYqGMGGAR3XD4H-GfStY", lat:35.667355, lng:139.707743 },
+  { n:"Jiyugaoka", jp:"自由が丘", c:"nb", note:"A leafy, upmarket residential area known for its concentration of bakeries, sweet shops, and boutique homeware stores. A slower, more suburban pace than central Tokyo.", p:"ChIJR0UdxeH0GGARwV6PMnPblQM", lat:35.6105884, lng:139.6668931 },
+  { n:"Nakano", jp:"中野", c:"nb", note:"Home to Nakano Broadway, but the surrounding streets have their own mix of retro shopping arcades, cheap eats, and a slightly rougher edge than the more polished neighborhoods.", p:"ChIJo9BwwI_yGGARzEFspqeGj3Q", lat:35.7075331, lng:139.6637591 },
+  { n:"Yoyogi", jp:"代々木", c:"nb", note:"Quieter than neighboring Harajuku and Shinjuku, anchored by Yoyogi Park. Good for a slower morning walk before diving into the busier areas nearby.", p:"ChIJa2rp2suMGGAR-oZn8d7y3M0", lat:35.6821697, lng:139.69369 },
+  { n:"Daikanyama T-SITE (Tsutaya)", c:"sh", note:"One of Tokyo's best bookstores. The building and complex are part of the draw.", p:"ChIJgfjQvk-LGGARqVwq1_ra-dY", lat:35.6488866, lng:139.6997888 },
+  { n:"Officine Universelle Buly — Daikanyama", c:"sh", note:"French beauty and lifestyle store. Interiors alone are worth the visit.", p:"ChIJ_--3mEaLGGARdcneI6w6AW8", lat:35.6474685, lng:139.7050313 },
+  { n:"Globe Specs", c:"sh", note:"Independent eyewear store, strong curation and atmosphere.", p:"ChIJk71fC0WLGGARTF9WiTalTuA", lat:35.6498351, lng:139.7011548 },
+  { n:"MUJI Daikanyama", c:"sh", note:"Go for the MUJI LABO line, not the standard assortment.", p:"ChIJn6IxMQCLGGARmHpXIizHbOw", lat:35.6482157, lng:139.7016891 },
+  { n:"Good Design Store Tokyo", c:"sh", note:"Products that won the Good Design Award, in one room.", p:"ChIJoce9SvqLGGAR-gu-eD-IW2E", lat:35.6797978, lng:139.7648724 },
+  { n:"Officine Universelle Buly — Marunouchi", c:"sh", note:"Second location, surrounded by quieter premium brands.", p:"ChIJ5X5AwS-LGGAR7QrHvuQe-N8", lat:35.6788026, lng:139.7626126 },
+  { n:"PORTER Omotesando", c:"sh", note:"Large flagship for the Japanese bag brand PORTER.", p:"ChIJj2cTCKGMGGARuMih6fC6a3g", lat:35.6660059, lng:139.7090154 },
+  { n:"Gentle Monster (Aoyama)", c:"sh", note:"Korean eyewear brand. Store design rivals the product.", p:"ChIJe9Oq7QyLGGARm0AWQR6PzOM", lat:35.6635464, lng:139.7147207 },
+  { n:"MoMA Design Store", c:"sh", note:"Design objects and gifts, curated through the MoMA lens.", p:"ChIJP36z8KOMGGAR5lzkQV2oQ7g", lat:35.667407, lng:139.706783 },
+  { n:"Onitsuka Tiger — Nippon Made", c:"sh", note:"The Nippon Made line: Japanese manufacturing, stronger craft focus.", p:"ChIJUQPpwKOMGGAR7HeRKs9eJrI", lat:35.6683472, lng:139.7078542 },
+  { n:"SOU・SOU", c:"sh", note:"Kyoto brand mixing traditional Japanese references with contemporary design.", p:"ChIJh5S0MWGLGGARjJ9q4xbTv-8", lat:35.6612521, lng:139.714892 },
+  { n:"On Flagship Store", c:"sh", note:"Running shoe flagship. Side streets mix fashion, sportswear, vintage.", p:"ChIJd6tm26iNGGARMnpGBgEqiuM", lat:35.6661636, lng:139.7057893 },
+  { n:"Samsung Galaxy Harajuku", c:"sh", note:"Product demos and exhibitions rather than a straight retail store.", p:"ChIJl60WxBONGGAR9UglF463lk8", lat:35.6697666, lng:139.7060957 },
+  { n:"Jordan World of Flight", c:"sh", note:"Sneaker and basketball culture flagship.", p:"ChIJb_WuwsqNGGARzw-PVLpeB7s", lat:35.6657011, lng:139.7028908 },
+  { n:"TOMORROWLAND Shibuya", c:"sh", note:"Curated high-end Japanese fashion retailer.", p:"ChIJTZhjx6eMGGARx7P6Drq03XQ", lat:35.6620432, lng:139.702579 },
+  { n:"Shibuya PARCO", c:"sh", note:"Streetwear, luxury and a pop-culture floor (Pokémon Center, Nintendo).", p:"ChIJcyH-4qiMGGARGzk4lZCx2xo", lat:35.6620484, lng:139.6987767 },
+  { n:"KITH Tokyo (Miyashita Park)", c:"sh", note:"Sneaker/streetwear store, clean design. The mall's worth a walk too.", p:"ChIJS8rj5bCNGGAR0UKgjv-0jf0", lat:35.662959, lng:139.7019806 },
+  { n:"21_21 DESIGN SIGHT", c:"ar", note:"Tadao Ando building, Issey Miyake involved in the original concept.", p:"ChIJV4H0Nn-LGGAR2g7_9Kourf4", lat:35.6675248, lng:139.7305214 },
+  { n:"Mori Art Museum", c:"ar", note:"Contemporary art in Roppongi Hills, plus one of the best skyline views in Tokyo.", p:"ChIJg5RCD3eLGGAR6dbIHRM98w8", lat:35.6604621, lng:139.7292785 },
+  { n:"teamLab Borderless", c:"ar", note:"Immersive digital art, now at Azabudai Hills. Touristy, still worth doing once.", p:"ChIJQ5Sa1PqJGGARUSaNKKOrMVg", lat:35.6620689, lng:139.7432671 },
+  { n:"Intermediatheque", c:"ar", note:"Free museum, natural history specimens and curiosities. The exhibition design is the real draw.", p:"ChIJF5AiNPqLGGAR2igPgxC2_Kw", lat:35.6800744, lng:139.7646866 },
+  { n:"Shiseido Art & Science Lab", c:"ar", note:"Art, science, beauty and design intersection. In Yokohama, not central Tokyo.", p:"ChIJeURW69VdGGARRuw-kSdTAC8", lat:35.4613704, lng:139.6259184 },
+  { n:"SKWAT / twelvebooks", c:"bk", note:"Curated art/design/culture bookstore, record shop and gallery. Far north Tokyo, worth the trip.", p:"ChIJYe_IqpWLGGARu7Vph_AKfZ8", lat:35.763671, lng:139.839829 },
+  { n:"Tsutaya Electrics (Futako-Tamagawa)", c:"bk", note:"Books, electronics, gadgets, furniture and lifestyle in one large space.", p:"ChIJI1sVhj_0GGARND7pSKDUYyE", lat:35.6110305, lng:139.6296446 },
+  { n:"ONLY FREE PAPER TOKYO", c:"bk", note:"Free newspapers, magazines, zines, prints. A quiet gem for independent publishing.", p:"ChIJLU6FXoDlGGARpCl74xPYoYU", lat:35.6406308, lng:139.7021625 },
+  { n:"POST", c:"bk", note:"Art, design and photography books. Curated small over big.", p:"ChIJBy-IdT-LGGARyaJFeE7_3Tc", lat:35.643802, lng:139.709059 },
+  { n:"Ichiran Ramen (Shibuya)", c:"fd", note:"Touristy, still good. Go a few spice levels higher than default.", p:"ChIJOWucdKiMGGARbppa4b4CKA8", lat:35.6611185, lng:139.7009846 },
+  { n:"Tsujihan", c:"fd", note:"Kaisendon, especially the signature seafood bowl. Go early or expect to queue.", p:"ChIJU-JXDf2LGGARHsancfqkHyE", lat:35.6807167, lng:139.7715771 },
+  { n:"Yakiniku Champion (Ebisu)", c:"fd", note:"Great yakiniku, especially autumn/winter. Small space, hard to get a seat.", p:"ChIJn80F6ECLGGARIXPRhg_K6ks", lat:35.6460257, lng:139.7077214 },
+  { n:"Yakiniku Toraji", c:"fd", note:"Yakiniku chain, multiple locations. Easier to slot into an itinerary.", p:"ChIJLcz6LNaMGGARv3WBZR1z7xo", lat:35.6711801, lng:139.7608753 },
+  { n:"Jomon Roppongi", c:"iz", note:"Yakitori and grilled skewers. Staff speak good English.", p:"ChIJ8TT2dZ2LGGARCALI3eL1E1M", lat:35.6613748, lng:139.7329948 },
+  { n:"Ginza Kagari", c:"fd", note:"Rich chicken-based ramen, small and busy. Expect a queue at peak times.", p:"ChIJjykJZCCLGGARMx5vYqRsWYI", lat:35.6712019, lng:139.7613315 },
+  { n:"Green Bean to Bar Chocolate (Nakameguro)", c:"cf", note:"Bean-to-bar chocolate, excellent hot chocolate.", p:"ChIJAQDcZlKLGGAR1kTxj0X0Eb8", lat:35.6488895, lng:139.694069 },
+  { n:"Mandarake (Shibuya)", c:"ty", note:"Secondhand and vintage Japanese pop culture: toys, figures, manga, CDs.", p:"ChIJF2HRSKiMGGAR1qOAPQK1yko", lat:35.6615247, lng:139.6977267 },
+  { n:"Mandarake Complex (Akihabara)", c:"ty", note:"Eight floors, the biggest Mandarake location.", p:"ChIJm3WItR2MGGAR05t5cpt7U4w", lat:35.7003733, lng:139.7705031 },
+  { n:"Nakano Broadway", c:"ty", note:"An entire complex of specialist toy and collectible stores.", p:"ChIJg-7dspDyGGARvvDv4E5-tuE", lat:35.7092475, lng:139.6656524 },
+  { n:"芽の巣山 (Menosuyama)", c:"sh", note:"Plant shop in Koenji, known for agave and rare botanicals. Small and well-curated, worth a detour if you're into plants.", lat:35.7035993, lng:139.6495386, link:"https://maps.app.goo.gl/RLScFt7LoAUrF5Nr7" },
+  { n:"GRAIN (Koenji)", c:"cf", note:"Neighborhood cafe in Koenji with a PA system for live music and talk events. Fits the Koenji night-crawl mood.", lat:35.7035625, lng:139.6495138, link:"https://maps.app.goo.gl/2LEguGgYSzHeHi8J8" },
+  { n:"文月 (Fuzuki, Kuramae)", c:"sh", note:"Select shop in Kuramae for craft tableware and artisan goods. Same low-key, maker-focused mood as the rest of Kuramae.", lat:35.7025555, lng:139.7905413, link:"https://maps.app.goo.gl/E5WUsKzCpQmC3Cot9" }
+];
+
+// Dark, desaturated per-neighborhood colors for the card/hero backgrounds
+// (no photos anymore, so each neighborhood gets its own calm, mature block color).
+const NB_COLORS = {
+  "Shimokitazawa": "#4A3B47",
+  "Koenji": "#33393F",
+  "Kichijoji": "#2F4436",
+  "Nakameguro": "#234A48",
+  "Daikanyama": "#33404A",
+  "Marunouchi": "#232F45",
+  "Shimbashi": "#4A3A2A",
+  "Jimbocho": "#4A2A30",
+  "Gakugeidaigaku": "#4A4536",
+  "Kuramae": "#4A342A",
+  "Kagurazaka": "#452334",
+  "Harajuku": "#452A42",
+  "Omotesando": "#3D3A34",
+  "Jiyugaoka": "#3A4438",
+  "Nakano": "#4A4030",
+  "Yoyogi": "#253A2E"
+};
+function nbColor(nb){ return NB_COLORS[nb.n] || '#3A3A3A'; }
+
+const MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#E8E8E5" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#92928D" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#F2F2F2" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#b5b5ae" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#EEEEED" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#DCDCD7" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#D4D8DB" }] }
+];
+
+let map, PlaceClass, MyLocationOverlayClass, NbCloseOverlayClass;
+let nbCloseOverlay = null;
+const markers = {};
+let detailNeighborhood = null;
+let selectedIdx = null;
+let nbCircle = null;
+let myLocationOverlay = null;
+
+// Click-and-drag horizontal scroll for mouse users (touch already scrolls natively).
+function enableDragScroll(el){
+  if (!el || el._dragScrollBound) return;
+  el._dragScrollBound = true;
+  let isDown = false, startX = 0, startScroll = 0, moved = false;
+  el.addEventListener('mousedown', (e) => {
+    isDown = true; moved = false;
+    startX = e.pageX;
+    startScroll = el.scrollLeft;
+    el.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const dx = e.pageX - startX;
+    if (Math.abs(dx) > 4) moved = true;
+    el.scrollLeft = startScroll - dx;
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false;
+    el.style.cursor = '';
+  });
+  // Suppress the click that follows a drag so cards don't get accidentally opened.
+  el.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+}
+
+function distKm(lat1, lng1, lat2, lng2){
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function assignPlacesToNeighborhoods(){
+  const neighborhoods = PLACES.filter(p => p.c === 'nb' && p.lat != null);
+  neighborhoods.forEach(n => n.nearby = []);
+  PLACES.forEach(p => {
+    if (p.c === 'nb' || p.lat == null) return;
+    let best = null, bestD = Infinity;
+    neighborhoods.forEach(n => {
+      const d = distKm(p.lat, p.lng, n.lat, n.lng);
+      if (d < bestD) { bestD = d; best = n; }
+    });
+    if (best) best.nearby.push(PLACES.indexOf(p));
+  });
+}
+
+let currentZoomShowName = false;
+const _measureCanvas = document.createElement('canvas');
+function measureTextWidth(text, font){
+  const ctx = _measureCanvas.getContext('2d');
+  ctx.font = font;
+  return ctx.measureText(text).width;
+}
+
+function pinIconUrl(place, active){
+  if (place.c === 'nb') {
+    // Neighborhoods: plain black name-only chip, no emoji, no rating. Unaffected by active state.
+    const font = '700 12px Arial';
+    const textW = measureTextWidth(place.n, font);
+    const w = Math.ceil(textW + 24), h = 25;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" rx="${h/2}" fill="#000"/><text x="${w/2}" y="17" font-family="Arial" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">${place.n}</text></svg>`;
+    return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), w, h };
+  }
+
+  const bg = active ? '#FC7200' : '#FFFFFF';
+  const fg = active ? '#FFFFFF' : '#0A0A0A';
+  const stroke = active ? 'none' : '#E5E3DD';
+  const cat = CATEGORIES[place.c];
+
+  if (!currentZoomShowName) {
+    // Zoomed out: compact emoji-only chip to avoid clutter.
+    const s = 30;
+    const strokeAttr = stroke === 'none' ? '' : ` stroke="${stroke}" stroke-width="1.5"`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><circle cx="${s/2}" cy="${s/2}" r="${s/2-1.5}" fill="${bg}"${strokeAttr}/><text x="${s/2}" y="${s/2+6}" font-size="17" text-anchor="middle">${cat.emoji}</text></svg>`;
+    return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), w: s, h: s };
+  }
+
+  // Zoomed in: emoji + name pill, regular weight.
+  const font = '400 12px Arial';
+  const nameW = measureTextWidth(place.n, font);
+  const w = Math.ceil(32 + nameW + 14), h = 26;
+  const strokeAttr = stroke === 'none' ? '' : ` stroke="${stroke}" stroke-width="1.5"`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" rx="${h/2}" fill="${bg}"${strokeAttr}/><text x="14" y="17" font-size="15" text-anchor="start">${cat.emoji}</text><text x="32" y="17" font-family="Arial" font-size="12" font-weight="400" fill="${fg}" text-anchor="start">${place.n}</text></svg>`;
+  return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), w, h };
+}
+
+function markerIconOptions(place, active){
+  const { url, w, h } = pinIconUrl(place, active);
+  return { url, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w/2, h/2) };
+}
+
+function updateMarkerIcon(idx, active){
+  const marker = markers[idx];
+  const place = PLACES[idx];
+  if (!marker || !place) return;
+  marker.setIcon(markerIconOptions(place, active));
+}
+
+function refreshAllMarkerIcons(){
+  Object.entries(markers).forEach(([idxStr, m]) => {
+    const idx = Number(idxStr);
+    const place = PLACES[idx];
+    if (!place) return;
+    m.setIcon(markerIconOptions(place, idx === selectedIdx));
+  });
+}
+
+// Local cache for API responses, keyed by place ID, stored in the browser.
+// Coordinates almost never change so they get a long TTL; photos get a shorter
+// one since a place's photo set can update. This only saves repeat cost for
+// the SAME browser/device — a brand new visitor's first load still hits the
+// API once, since there's nothing shared server-side to cache against.
+const CACHE_KEY = 'tokyo-guide-place-cache-v1';
+const LOCATION_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+const PHOTO_TTL_MS = 21 * 24 * 60 * 60 * 1000;    // 21 days
+
+function loadCache(){
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    console.warn('Cache read failed', err);
+    return {};
+  }
+}
+
+function saveCache(){
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(placeCache));
+  } catch (err) {
+    console.warn('Cache write failed', err);
+  }
+}
+
+const placeCache = loadCache();
+
+async function initMap(){
+  const { Map } = await google.maps.importLibrary("maps");
+  const { Place } = await google.maps.importLibrary("places");
+  PlaceClass = Place;
+
+  class LocationDot extends google.maps.OverlayView {
+    constructor(position){ super(); this.position = position; this.div = null; }
+    onAdd(){
+      this.div = document.createElement('div');
+      this.div.className = 'locate-dot';
+      this.div.innerHTML = '<div class="pulse"></div><div class="dot"></div>';
+      this.getPanes().overlayMouseTarget.appendChild(this.div);
+    }
+    draw(){
+      const proj = this.getProjection();
+      if (!proj || !this.div) return;
+      const pos = proj.fromLatLngToDivPixel(new google.maps.LatLng(this.position));
+      this.div.style.left = pos.x + 'px';
+      this.div.style.top = pos.y + 'px';
+    }
+    onRemove(){ if (this.div) { this.div.remove(); this.div = null; } }
+  }
+  MyLocationOverlayClass = LocationDot;
+
+  // Anchored to the neighborhood's marker so it tracks the map instead of sitting
+  // at a fixed screen position (which used to drift away from the chip on pan).
+  class NbCloseOverlay extends google.maps.OverlayView {
+    constructor(position, onClick){ super(); this.position = position; this.onClick = onClick; this.div = null; }
+    onAdd(){
+      this.div = document.createElement('div');
+      this.div.className = 'nb-close-anchor';
+      this.div.innerHTML = '<button class="nb-close-btn" title="Close neighborhood view">✕</button>';
+      this.div.querySelector('button').addEventListener('click', this.onClick);
+      this.getPanes().floatPane.appendChild(this.div);
+    }
+    draw(){
+      const proj = this.getProjection();
+      if (!proj || !this.div) return;
+      const pos = proj.fromLatLngToDivPixel(new google.maps.LatLng(this.position));
+      this.div.style.left = pos.x + 'px';
+      this.div.style.top = (pos.y + 22) + 'px';
+      this.div.style.transform = 'translate(-50%, 0)';
+    }
+    onRemove(){ if (this.div) { this.div.remove(); this.div = null; } }
+  }
+  NbCloseOverlayClass = NbCloseOverlay;
+
+  map = new Map(document.getElementById('map'), {
+    center: { lat: 35.6812, lng: 139.7180 },
+    zoom: 12,
+    styles: MAP_STYLE,
+    disableDefaultUI: true,
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.LEFT_BOTTOM }
+  });
+
+  currentZoomShowName = map.getZoom() >= 15;
+  map.addListener('zoom_changed', () => {
+    const showName = map.getZoom() >= 15;
+    if (showName !== currentZoomShowName) {
+      currentZoomShowName = showName;
+      refreshAllMarkerIcons();
+    }
+  });
+
+  document.getElementById('locateBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      map.panTo(coords);
+      map.setZoom(15);
+      if (myLocationOverlay) myLocationOverlay.setMap(null);
+      myLocationOverlay = new MyLocationOverlayClass(coords);
+      myLocationOverlay.setMap(map);
+    }, (err) => console.warn('Geolocation failed', err));
+  });
+
+  let remaining = PLACES.length;
+
+  await Promise.all(PLACES.map(async (place, idx) => {
+    // Places added with hardcoded coordinates (no resolvable place_id, e.g. from a
+    // shared Maps link) skip the API call entirely — zero GetPlaceRequest cost.
+    if (place.lat != null && place.lng != null) {
+      createMarker(place, idx);
+      remaining--;
+      if (remaining === 0) {
+        saveCache();
+        assignPlacesToNeighborhoods(); renderNeighborhoodBar(); render(); setCountText(PLACES.length + ' places for now');
+      }
+      else setCountText('Loading… (' + (PLACES.length - remaining) + '/' + PLACES.length + ')');
+      return;
+    }
+    const cached = placeCache[place.p];
+    const locationFresh = cached && cached.lat != null && (Date.now() - (cached.locFetchedAt || 0)) < LOCATION_TTL_MS;
+    if (locationFresh) {
+      place.lat = cached.lat;
+      place.lng = cached.lng;
+    } else {
+      try {
+        const p = new PlaceClass({ id: place.p });
+        await p.fetchFields({ fields: ['location'] });
+        place.lat = p.location.lat();
+        place.lng = p.location.lng();
+        placeCache[place.p] = { ...(placeCache[place.p] || {}), lat: place.lat, lng: place.lng, locFetchedAt: Date.now() };
+      } catch (err) {
+        console.warn('Place lookup failed for', place.n, err);
+      }
+    }
+    const photosFresh = cached && cached.photoUrl && (Date.now() - (cached.photoFetchedAt || 0)) < PHOTO_TTL_MS;
+    if (photosFresh) {
+      place.photoUrl = cached.photoUrl;
+      place.photosLoaded = true;
+    }
+    createMarker(place, idx);
+    remaining--;
+    if (remaining === 0) {
+      saveCache();
+      assignPlacesToNeighborhoods(); renderNeighborhoodBar(); render(); setCountText(PLACES.length + ' places for now');
+    }
+    else setCountText('Loading… (' + (PLACES.length - remaining) + '/' + PLACES.length + ')');
+  }));
+}
+
+// Photos are the most expensive field to fetch and most places are never opened,
+// so they're pulled on demand (place modal / neighborhood detail) instead of upfront
+// for all 52 places on every page load.
+async function ensurePhotosLoaded(place){
+  if (place.photosLoaded) return;
+  place.photosLoaded = true;
+  if (!place.p) return; // No place_id (hardcoded-coordinate entry) — nothing to fetch.
+  try {
+    const p = new PlaceClass({ id: place.p });
+    await p.fetchFields({ fields: ['photos'] });
+    // Only ever request the URI for a single photo — each photo loaded is its
+    // own billed request, so we never fetch more than the one we'll show.
+    const first = (p.photos || [])[0];
+    place.photoUrl = first ? first.getURI({ maxWidth: 800, maxHeight: 600 }) : null;
+    placeCache[place.p] = { ...(placeCache[place.p] || {}), photoUrl: place.photoUrl, photoFetchedAt: Date.now() };
+    saveCache();
+  } catch (err) {
+    console.warn('Photo lookup failed for', place.n, err);
+    place.photoUrl = null;
+  }
+}
+
+function createMarker(place, idx){
+  if (place.lat == null) return;
+  const marker = new google.maps.Marker({ position: { lat: place.lat, lng: place.lng }, map, icon: markerIconOptions(place, false), title: place.n });
+  marker.addListener('click', () => {
+    if (place.c === 'nb') openNeighborhoodDetail(place);
+    else openModal(place, idx);
+  });
+  markers[idx] = marker;
+}
+
+function mapsUrl(place){ return place.link || `https://www.google.com/maps/place/?q=place_id:${place.p}`; }
+
+function renderModalContent(place, loadingPhotos){
+  const cat = CATEGORIES[place.c];
+  const photo = place.photoUrl
+    ? `<div class="modal-carousel-wrap"><img class="modal-single-photo" src="${place.photoUrl}" alt=""></div>`
+    : (loadingPhotos ? `<div class="modal-carousel-wrap"><div class="thumb" style="width:100%;height:220px;border-radius:14px;">…</div></div>` : '');
+
+  document.getElementById('modalBox').innerHTML = `
+    <button class="modal-close" id="modalCloseBtn">✕</button>
+    ${photo}
+    <div class="modal-cat">${cat.emoji} ${cat.label}</div>
+    <div class="modal-name">${place.n}</div>
+    <p class="modal-note">${place.note}</p>
+    <a class="modal-cta" href="${mapsUrl(place)}" target="_blank" rel="noopener" title="Open in Google Maps">${PIN_ICON}</a>
+  `;
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+}
+
+async function openModal(place, idx){
+  if (selectedIdx != null && selectedIdx !== idx) updateMarkerIcon(selectedIdx, false);
+  selectedIdx = idx;
+  updateMarkerIcon(idx, true);
+  renderModalContent(place, !place.photosLoaded);
+  document.getElementById('modalOverlay').classList.add('open');
+  if (!place.photosLoaded) {
+    await ensurePhotosLoaded(place);
+    if (selectedIdx === idx) renderModalContent(place, false);
+  }
+}
+
+function closeModal(){
+  if (selectedIdx != null) { updateMarkerIcon(selectedIdx, false); selectedIdx = null; }
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+let nbCircleAnimFrame = null;
+
+function animateNbCircle(){
+  const start = performance.now();
+  function step(now){
+    if (!nbCircle) return;
+    const t = (now - start) / 1000;
+    const wave = (Math.sin(t * 1.4) + 1) / 2; // 0..1
+    nbCircle.setOptions({
+      radius: 850 + wave * 150,
+      fillOpacity: 0.04 + wave * 0.06,
+      strokeOpacity: 0.3 + wave * 0.3
+    });
+    nbCircleAnimFrame = requestAnimationFrame(step);
+  }
+  nbCircleAnimFrame = requestAnimationFrame(step);
+}
+
+function stopNbCircleAnim(){
+  if (nbCircleAnimFrame) { cancelAnimationFrame(nbCircleAnimFrame); nbCircleAnimFrame = null; }
+}
+
+async function openNeighborhoodDetail(nb){
+  detailNeighborhood = nb;
+  render();
+  if (nbCloseOverlay) { nbCloseOverlay.setMap(null); nbCloseOverlay = null; }
+  if (nb.lat != null) {
+    map.panTo({ lat: nb.lat, lng: nb.lng });
+    map.setZoom(15);
+    stopNbCircleAnim();
+    if (nbCircle) nbCircle.setMap(null);
+    nbCircle = new google.maps.Circle({
+      strokeColor: '#0A0A0A', strokeOpacity: 0.45, strokeWeight: 2,
+      fillColor: '#0A0A0A', fillOpacity: 0.06,
+      map, center: { lat: nb.lat, lng: nb.lng }, radius: 900
+    });
+    animateNbCircle();
+    if (NbCloseOverlayClass) {
+      nbCloseOverlay = new NbCloseOverlayClass({ lat: nb.lat, lng: nb.lng }, closeNeighborhoodDetail);
+      nbCloseOverlay.setMap(map);
+    }
+  }
+  const nbIdx = PLACES.indexOf(nb);
+  const keepSet = new Set([nbIdx, ...(nb.nearby || [])]);
+  Object.entries(markers).forEach(([idxStr, m]) => {
+    m.setMap(keepSet.has(Number(idxStr)) ? map : null);
+  });
+}
+
+function closeNeighborhoodDetail(){
+  detailNeighborhood = null;
+  render();
+  if (nbCloseOverlay) { nbCloseOverlay.setMap(null); nbCloseOverlay = null; }
+  Object.values(markers).forEach(m => m.setMap(map));
+  stopNbCircleAnim();
+  if (nbCircle) { nbCircle.setMap(null); nbCircle = null; }
+  map.panTo({ lat: 35.6812, lng: 139.7180 });
+  map.setZoom(12);
+}
+
+function buildCard(place, key){
+  const idx = PLACES.indexOf(place);
+  const cat = CATEGORIES[key];
+  const card = document.createElement('div');
+  card.className = 'card';
+  const meta = cat.emoji + ' ' + cat.label;
+  card.innerHTML = `
+    <div class="card-body">
+      <div class="card-name">${place.n}</div>
+      <div class="card-meta">${meta}</div>
+      <p class="card-note">${place.note}</p>
+      <a class="card-link" href="${mapsUrl(place)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open in Google Maps">${PIN_ICON}</a>
+    </div>
+  `;
+  card.addEventListener('click', () => {
+    if (place.lat != null) {
+      map.panTo({ lat: place.lat, lng: place.lng });
+      map.setZoom(15);
+      openModal(place, idx);
+    }
+    if (window.innerWidth < 880) setSheetState('half');
+  });
+  return card;
+}
+
+function nameSizeClass(name){
+  if (name.length > 26) return 'longer';
+  if (name.length > 16) return 'long';
+  return '';
+}
+
+function renderNeighborhoodBar(){
+  const bar = document.getElementById('nbBarInner');
+  enableDragScroll(bar);
+  bar.innerHTML = '';
+  PLACES.filter(p => p.c === 'nb').forEach(place => {
+    const card = document.createElement('div');
+    card.className = 'nb-card';
+    card.style.background = nbColor(place);
+    const count = (place.nearby || []).length;
+    card.innerHTML = `
+      <div class="nb-card-count">${count} spot${count === 1 ? '' : 's'}</div>
+      <div class="nb-card-name">${place.n}</div>
+      <div class="nb-card-jp">${place.jp || ''}</div>
+    `;
+    card.addEventListener('click', () => openNeighborhoodDetail(place));
+    bar.appendChild(card);
+  });
+}
+
+const chipsEl = document.getElementById('chips');
+enableDragScroll(chipsEl);
+let activeCategory = null; // null = "All"
+
+const allChip = document.createElement('button');
+allChip.className = 'chip active';
+allChip.textContent = 'All';
+allChip.addEventListener('click', () => {
+  activeCategory = null;
+  syncChipStates();
+  render();
+});
+chipsEl.appendChild(allChip);
+
+const chipEls = {};
+Object.entries(CATEGORIES).forEach(([key, cat]) => {
+  if (key === 'nb') return;
+  const chip = document.createElement('button');
+  chip.className = 'chip';
+  chip.textContent = cat.emoji + ' ' + cat.label;
+  chip.addEventListener('click', () => {
+    activeCategory = (activeCategory === key) ? null : key;
+    syncChipStates();
+    render();
+  });
+  chipEls[key] = chip;
+  chipsEl.appendChild(chip);
+});
+
+function syncChipStates(){
+  allChip.classList.toggle('active', activeCategory === null);
+  Object.entries(chipEls).forEach(([key, el]) => el.classList.toggle('active', activeCategory === key));
+}
+
+const listEl = document.getElementById('list');
+const searchEl = document.getElementById('search');
+const sheetCountDesktop = document.getElementById('sheetCountDesktop');
+const sheetCountMobile = document.getElementById('sheetCountMobile');
+function setCountText(t){ sheetCountDesktop.textContent = t; sheetCountMobile.textContent = t; }
+
+function playListAnim(){
+  listEl.classList.remove('list-anim');
+  void listEl.offsetWidth;
+  listEl.classList.add('list-anim');
+}
+
+const filterRowEl = document.getElementById('filterRow');
+const EMPTY_MESSAGES = [
+  '😅 Nothing saved here yet',
+  '🫥 Quiet around here — nothing filed yet',
+  '🧭 Uncharted territory. Nothing saved yet',
+  '🍃 Nothing here yet — go find something good'
+];
+
+function render(){
+  const query = searchEl.value.trim().toLowerCase();
+
+  // Detach chips before wiping the list so the node (and its listeners) survive.
+  if (chipsEl.parentElement === listEl) filterRowEl.appendChild(chipsEl);
+  listEl.innerHTML = '';
+
+  if (detailNeighborhood) {
+    filterRowEl.classList.add('hidden');
+    listEl.style.paddingTop = '0px';
+    const nb = detailNeighborhood;
+
+    const heroStyle = ` style="background:${nbColor(nb)}"`;
+    const hero = document.createElement('div');
+    hero.className = 'nb-hero-sticky';
+    hero.innerHTML = `
+      <div class="nb-hero"${heroStyle}>
+        <button class="nb-hero-close" id="nbHeroClose" title="Back to all neighborhoods">✕</button>
+        <div class="nb-hero-content">
+          <div class="nb-hero-name">${nb.n}</div>
+          <div class="nb-hero-jp">${nb.jp || ''}</div>
+          <div class="nb-hero-note">${nb.note}</div>
+        </div>
+      </div>
+    `;
+    listEl.appendChild(hero);
+    hero.querySelector('#nbHeroClose').addEventListener('click', closeNeighborhoodDetail);
+
+    listEl.appendChild(chipsEl);
+    requestAnimationFrame(() => {
+      if (chipsEl.parentElement === listEl) chipsEl.style.top = hero.offsetHeight + 'px';
+    });
+
+    const nearbyIdx = nb.nearby || [];
+    const byCategory = {};
+    nearbyIdx.forEach(i => {
+      const p = PLACES[i];
+      if (activeCategory && p.c !== activeCategory) return;
+      (byCategory[p.c] = byCategory[p.c] || []).push(p);
+    });
+
+    const anyResults = Object.keys(byCategory).length > 0;
+    if (!anyResults) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)];
+      listEl.appendChild(empty);
+      playListAnim();
+      return;
+    }
+
+    Object.entries(CATEGORIES).forEach(([key, cat]) => {
+      if (key === 'nb' || !byCategory[key]) return;
+      const sec = document.createElement('div');
+      sec.className = 'section-label';
+      sec.textContent = cat.emoji + ' ' + cat.label;
+      listEl.appendChild(sec);
+      byCategory[key].forEach(place => listEl.appendChild(buildCard(place, key)));
+    });
+
+    playListAnim();
+    return;
+  }
+
+  filterRowEl.classList.remove('hidden');
+  listEl.style.paddingTop = '';
+
+  let total = 0;
+
+  Object.entries(CATEGORIES).forEach(([key, cat]) => {
+    if (key === 'nb') return;
+    if (activeCategory && activeCategory !== key) return;
+    const items = PLACES.filter(p => {
+      const matches = !query || p.n.toLowerCase().includes(query) || p.note.toLowerCase().includes(query) || cat.label.toLowerCase().includes(query);
+      return p.c === key && matches;
+    });
+    if (items.length === 0) return;
+    total += items.length;
+
+    const sec = document.createElement('div');
+    sec.className = 'section-label';
+    sec.textContent = cat.emoji + ' ' + cat.label;
+    listEl.appendChild(sec);
+
+    items.forEach(place => listEl.appendChild(buildCard(place, key)));
+  });
+
+  if (total === 0) {
+    listEl.innerHTML = `<div class="empty">${EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)]}</div>`;
+  }
+  playListAnim();
+}
+
+searchEl.addEventListener('input', render);
+searchEl.addEventListener('focus', () => { if (window.innerWidth < 880) setSheetState('full'); });
+
+// Logo click resets the whole app to its default state: no modal, no neighborhood
+// detail, no filters/search, map recentered, and drawer back to its resting position.
+function resetToDefault(){
+  closeModal();
+  detailNeighborhood = null;
+  activeCategory = null;
+  searchEl.value = '';
+  syncChipStates();
+  if (nbCloseOverlay) { nbCloseOverlay.setMap(null); nbCloseOverlay = null; }
+  Object.values(markers).forEach(m => m.setMap(map));
+  stopNbCircleAnim();
+  if (nbCircle) { nbCircle.setMap(null); nbCircle = null; }
+  map.panTo({ lat: 35.6812, lng: 139.7180 });
+  map.setZoom(12);
+  render();
+  setSheetState('peek');
+}
+document.getElementById('brandLogo').addEventListener('click', resetToDefault);
+
+// Typing-animated placeholder suggestions
+const SUGGESTION_POOL = [
+  ...PLACES.filter(p => p.c === 'nb').map(p => p.n),
+  ...Object.entries(CATEGORIES).filter(([k]) => k !== 'nb').map(([, c]) => c.label)
+];
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function userIsTyping(){ return document.activeElement === searchEl || !!searchEl.value; }
+
+async function animatePlaceholder(){
+  let current = '';
+  searchEl.placeholder = 'Search…';
+  while (true) {
+    await sleep(1800);
+    if (userIsTyping()) continue;
+
+    const pick = SUGGESTION_POOL[Math.floor(Math.random() * SUGGESTION_POOL.length)];
+    const target = `Search "${pick}"…`;
+
+    while (current.length > 0) {
+      if (userIsTyping()) break;
+      current = current.slice(0, -1);
+      searchEl.placeholder = current;
+      await sleep(22);
+    }
+    for (let i = 1; i <= target.length; i++) {
+      if (userIsTyping()) break;
+      current = target.slice(0, i);
+      searchEl.placeholder = current;
+      await sleep(42);
+    }
+  }
+}
+animatePlaceholder();
+
+const sheet = document.getElementById('sheet');
+const handleZone = document.getElementById('handleZone');
+
+function isFull(){ return sheet.classList.contains('state-full'); }
+
+function setSheetState(state){
+  if (window.innerWidth >= 880) return;
+  sheet.classList.remove('state-half','state-full');
+  if (state === 'half') sheet.classList.add('state-half');
+  if (state === 'full') sheet.classList.add('state-full');
+  sheet.style.transform = '';
+}
+let dragStartY=0, dragStartTranslate=0, dragging=false;
+function getCurrentTranslate(){ const t=getComputedStyle(sheet).transform; if(t==='none')return 0; return new DOMMatrixReadOnly(t).m42; }
+function onPointerDown(e){
+  if (window.innerWidth >= 880) return;
+  dragging = true; sheet.classList.add('dragging');
+  dragStartY = (e.touches?e.touches[0].clientY:e.clientY);
+  dragStartTranslate = getCurrentTranslate();
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('touchmove', onPointerMove, {passive:false});
+  window.addEventListener('mouseup', onPointerUp);
+  window.addEventListener('touchend', onPointerUp);
+}
+function onPointerMove(e){
+  if (!dragging) return;
+  if (e.cancelable) e.preventDefault();
+  const y = (e.touches?e.touches[0].clientY:e.clientY);
+  const next = Math.max(0, dragStartTranslate + (y - dragStartY));
+  sheet.style.transform = `translateY(${next}px)`;
+}
+function onPointerUp(){
+  if (!dragging) return;
+  dragging = false; sheet.classList.remove('dragging');
+  window.removeEventListener('mousemove', onPointerMove);
+  window.removeEventListener('touchmove', onPointerMove);
+  window.removeEventListener('mouseup', onPointerUp);
+  window.removeEventListener('touchend', onPointerUp);
+  const y = getCurrentTranslate(), vh = window.innerHeight;
+  // Manual drags only snap between peek and full — "half" stays reachable programmatically
+  // (e.g. opening a neighborhood) but isn't a resting point for a user's own drag gesture,
+  // so one pull always reaches the top instead of stalling halfway.
+  const points = [{state:'full',y:0},{state:'peek',y:vh*0.88-140}];
+  let closest = points[0], best = Infinity;
+  points.forEach(pt => { const d=Math.abs(pt.y-y); if(d<best){best=d;closest=pt;} });
+  setSheetState(closest.state);
+}
+handleZone.addEventListener('mousedown', onPointerDown);
+handleZone.addEventListener('touchstart', onPointerDown, {passive:true});
+
+// List area and filter row also initiate a sheet-drag when not fully expanded,
+// so the whole drawer (not just the handle) is a valid drag surface.
+listEl.addEventListener('mousedown', (e) => { if (!isFull()) onPointerDown(e); });
+listEl.addEventListener('touchstart', (e) => { if (!isFull()) onPointerDown(e); }, {passive:true});
+filterRowEl.addEventListener('mousedown', (e) => { if (!isFull()) onPointerDown(e); });
+filterRowEl.addEventListener('touchstart', (e) => { if (!isFull()) onPointerDown(e); }, {passive:true});
+
+setSheetState('peek');
+
+(g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key: "AIzaSyBrnL-cAqLTxGRkFpp8-l1xE13TQogY120", v: "weekly"});
+
+initMap();
+</script>
+</body>
+</html>
